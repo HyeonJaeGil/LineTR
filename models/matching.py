@@ -4,6 +4,7 @@ from .superpoint import SuperPoint
 from .line_detector import LSD #, ELSED
 from .line_transformer import LineTransformer, get_dist_matrix
 from .nn_matcher import nn_matcher, nn_matcher_distmat
+from .nn_matcher_binary import get_dist_matrix_binary
 
 class Matching(torch.nn.Module):
     """ Image Matching with SuperPoint & LineTR """
@@ -73,6 +74,15 @@ class Matching(torch.nn.Module):
         pred['matches_p'] = torch.from_numpy(match_mat_pnt)
         pred['matching_scores_p'] = torch.from_numpy(dist_mat_pnt)
 
+        ## Feature Point Matching using binary Nearest Neighbor
+        desc0_pnt = data['descriptors_bin0'][0].cpu().numpy()
+        desc1_pnt = data['descriptors_bin1'][0].cpu().numpy()
+        distance_pnt_bin = get_dist_matrix_binary(desc0_pnt[None], desc1_pnt[None])
+        match_mat_bin = nn_matcher_distmat(distance_pnt_bin, self.superpoint.config['nn_threshold'], is_mutual_NN=True)
+
+        pred['matches_p_bin'] = torch.from_numpy(match_mat_bin)
+        pred['matching_scores_p_bin'] = torch.from_numpy(distance_pnt_bin)
+
         ## Feature Line Matching using Nearest Neighbor
         desc_slines0 = data['line_desc0'].cpu().numpy()
         desc_slines1 = data['line_desc1'].cpu().numpy()
@@ -82,5 +92,15 @@ class Matching(torch.nn.Module):
 
         pred['matches_l'] = torch.from_numpy(match_mat)
         pred['matching_scores_l'] = torch.from_numpy(distance_matrix)
+
+        ## Feature Line Matching using binary Nearest Neighbor
+        desc_slines_bin0 = data['line_desc_bin0'].cpu().numpy()
+        desc_slines_bin1 = data['line_desc_bin1'].cpu().numpy()
+        distance_sublines_bin = get_dist_matrix_binary(desc_slines_bin0, desc_slines_bin1)[0]
+        distance_matrix_bin = self.linetransformer.subline2keyline(distance_sublines_bin, data['mat_klines2sublines0'][0], data['mat_klines2sublines1'][0])
+        match_mat_bin = nn_matcher_distmat(distance_matrix_bin, self.linetransformer.config['nn_threshold'], is_mutual_NN=True)
+        
+        pred['matches_l_bin'] = torch.from_numpy(match_mat_bin)
+        pred['matching_scores_l_bin'] = torch.from_numpy(distance_matrix_bin)
        
         return pred

@@ -44,6 +44,7 @@
 from pathlib import Path
 import torch
 from torch import nn
+from .nn_matcher_binary import binarize_descriptor_tensor
 
 def simple_nms(scores, nms_radius: int):
     """ Fast Non-maximum suppression to remove nearby points """
@@ -195,6 +196,10 @@ class SuperPoint(nn.Module):
         # Extract descriptors
         descriptors = [sample_descriptors(k[None], d[None], 8)[0]
                        for k, d in zip(keypoints, dense_descriptor)]
+        
+        # binarize descriptors
+        descriptors_bin = [binarize_descriptor_tensor(d, axis=0) for d in descriptors]
+        dense_descriptor_bin = binarize_descriptor_tensor(dense_descriptor, axis=1)
 
         return {
             'keypoints': keypoints,
@@ -202,4 +207,6 @@ class SuperPoint(nn.Module):
             'descriptors': descriptors,
             'dense_descriptor': dense_descriptor,
             'dense_score': dense_score,
+            'descriptors_bin': descriptors_bin,
+            'dense_descriptor_bin': dense_descriptor_bin,
         }

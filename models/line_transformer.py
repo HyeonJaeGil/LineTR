@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from .line_attention import MultiHeadAttention, FeedForward
 from .line_process import *
+from .nn_matcher_binary import binarize_descriptor_tensor
 from einops import rearrange, repeat
 
 def MLP(channels: list, do_bn=True):    # channels [3, 32, 64, 128, 256, 256]
@@ -245,6 +246,10 @@ class LineTransformer(nn.Module):
         line_desc_ = self.final_proj(line_desc_)
         line_desc_ = torch.nn.functional.normalize(line_desc_, p=2, dim=1)
         data.update({'line_desc': line_desc_})
+
+        # binarize line descriptors
+        line_desc_bin_ = binarize_descriptor_tensor(line_desc_)
+        data.update({'line_desc_bin': line_desc_bin_})
 
         return data
     
